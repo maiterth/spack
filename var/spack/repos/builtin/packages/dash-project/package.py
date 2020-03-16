@@ -51,14 +51,21 @@ class DashProject(CMakePackage):
     variant('hdf5',    default=False, description='+hdf5')
     variant('memkind', default=True, description='+memkind')
     variant('plasma',  default=False, description='+plasma')
-    
+
+    variant('cxxstd',
+               default='11',
+               values=('11', '14', '17'),
+               multi=False,
+               description='Use the specified C++ standard when building.')
 
     variant('build_type', default='RelWithDebInfo',
             description='CMake build type',
             values=('Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'))
 
+    filter_compiler_wrappers(
+            'dash-mpicxx','dash-mpic++','dash-mpiCC',relative_root='bin')
 
-
+    depends_on('ninja', type='build')
     depends_on('mpi@3.0',when='+mpi', type=('build', 'run'))
     depends_on('cuda',when='+cuda', type=('build', 'run'))
     depends_on('papi',when='+papi', type=('build', 'run'))
@@ -76,9 +83,23 @@ class DashProject(CMakePackage):
     patch('INSTALL_PREFIX-out.patch')
 
 
+    def cmake_args(self):
+        spec = self.spec
+        args = []
+        args.append('-DCMAKE_CXX_STANDARD={0}'.format(
+                        spec.variants['cxxstd'].value))
+        # Require standard at configure time to guarantee the
+                # compiler supports the selected standard.
+        args.append('-DCMAKE_CXX_STANDARD_REQUIRED=ON')
+
+        return args
+
+#    def setup_dependent_build_environment(self, env, dependent_spec):
+#        env.set('MPICXX', spack_cxx)
+
     def setup_run_environment(self, env):
         env.set('DASH_ROOT', self.prefix)
-#        env.set('DASH_BASE', self.prefix)
+        env.set('DASH_BASE', self.prefix)
 
 #    @run_after('install')
 #    def filter_compilers(self):
@@ -103,10 +124,6 @@ class DashProject(CMakePackage):
 #        prefix = self.prefix
 
 
-#    def setup_dependent_package(self, module, dependent_spec):
 #        module.dashproject = Executable('dash-mpiCC')
 #        module.dashproject = Executable('dash-mpic++')
 #        module.dash-project = Executable('dash-mpicxx')
-#        env.set('MPICC_CC', spack_cc)
-#        env.set('MPICXX_CXX', spack_cxx)
-#        env.set('MPIF90_F90', spack_fc)
