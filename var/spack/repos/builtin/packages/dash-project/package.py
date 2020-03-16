@@ -40,17 +40,10 @@ class DashProject(CMakePackage):
 #    version('0.2.0', sha256='f0291ffcb939aa69cdc22e7c2ecbf27d38b762d0d7dab345bd3c9f872fbccd6f',
 #            url="https://github.com/dash-project/dash/archive/dash-0.2.0.tar.gz") #Issue with Pthreads
 
-    variant('mpi', default=True, description='+mpi')
-    variant('cuda',    default=False, description='+cuda')
-    variant('papi',    default=True, description='+papi')
-    variant('numactl', default=True, description='+numactl')
-    variant('hwloc',   default=True, description='+hwloc')
-    variant('blas',    default=True, description='+blas')
-    variant('lapack',  default=True, description='+lapack')
-    variant('likwid',  default=True, description='+likwid')
-    variant('hdf5',    default=False, description='+hdf5')
-    variant('memkind', default=True, description='+memkind')
-    variant('plasma',  default=False, description='+plasma')
+    variant('dart',default='mpi',
+            values=('mpi','shmem'),
+            multi=False,
+            description="Use specifc dart backend.")
 
     variant('cxxstd',
                default='11',
@@ -62,22 +55,63 @@ class DashProject(CMakePackage):
             description='CMake build type',
             values=('Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'))
 
+    variant('shared',default=True, description='Enable Shared Libs')
+    variant('threads',default=True, description='Enable THREADSUPPORT ')
+
     filter_compiler_wrappers(
             'dash-mpicxx','dash-mpic++','dash-mpiCC',relative_root='bin')
 
-    depends_on('ninja', type='build')
+    depends_on('binutils', type=('build','run'))
+    depends_on('libtool', type=('build','run'))
+    depends_on('cmake', type=('build','run'))
+    depends_on('ninja', type=('build','run'))
+#    depends_on('ncurses', type=('build','run'))
+    depends_on('pkgconfig', type='build')
+    
+#    variant('cuda',    default=False, description='+cuda')
+#    depends_on('cuda',when='+cuda', type=('build', 'run'))
+   
+
+
+    variant('mpi', default=True, description='+mpi')
     depends_on('mpi@3.0',when='+mpi', type=('build', 'run'))
-    depends_on('cuda',when='+cuda', type=('build', 'run'))
+    
+    variant('papi',    default=True, description='+papi')
     depends_on('papi',when='+papi', type=('build', 'run'))
-    depends_on('numactl',when='+numactl', type=('build', 'run'))
-    depends_on('hwloc',when='+hwloc', type=('build', 'run'))
-    depends_on('googletest',when='+googletest')
+    
+    variant('mkl',  default=False, description='+mkl')
+    depends_on('mkl',when='+mkl', type=('build', 'run'))
+   
+    variant('blas',    default=False, description='+blas')
     depends_on('blas',when='+blas', type=('build', 'run'))
-    depends_on('lapack',when='+lapack', type=('build', 'run'))
+    
+    variant('hwloc',   default=True, description='+hwloc')
+    depends_on('hwloc@:1.999',when='+hwloc', type=('build', 'run'))
+
+    variant('likwid',  default=False, description='+likwid')
     depends_on('likwid',when='+likwid', type=('build', 'run'))
+  
+    variant('lapack',  default=True, description='+lapack')
+    depends_on('lapack',when='+lapack', type=('build', 'run'))
+
+    variant('scalapack',  default=True, description='+scalapack')
+    depends_on('netlib-scalapack',when='+scalapack', type=('build', 'run'))
+
+    variant('plasma',  default=False, description='+plasma')
     depends_on('plasma',when='+plasma', type=('build', 'run'))
+   
+    variant('hdf5',    default=False, description='+hdf5')
     depends_on('hdf5 cxx=True fortran=True szip=True threadsafe=True',when='+hdf5', type=('build', 'run'))
+    
+    variant('memkind', default=True, description='+memkind')
     depends_on('memkind',when='+memkind', type=('build', 'run'))
+
+    variant('numactl', default=True, description='+numactl')
+    depends_on('numactl',when='+numactl', type=('build', 'run'))
+
+    variant('googletest', default=False, description='+googletest')
+    depends_on('googletest',when='+googletest',type=('build','link'))
+    
 
 
     patch('INSTALL_PREFIX-out.patch')
@@ -85,17 +119,24 @@ class DashProject(CMakePackage):
 
     def cmake_args(self):
         spec = self.spec
-        args = []
-        args.append('-DCMAKE_CXX_STANDARD={0}'.format(
-                        spec.variants['cxxstd'].value))
-        # Require standard at configure time to guarantee the
-                # compiler supports the selected standard.
-        args.append('-DCMAKE_CXX_STANDARD_REQUIRED=ON')
-
+        args = [
+            '-DCMAKE_CXX_STANDARD_REQUIRED=ON',
+            '-DCMAKE_CXX_STANDARD={0}'.format(
+                        spec.variants['cxxstd'].value),
+            '-DBUILD_SHARED_LIBS={0}'.format(
+                        spec.variants['shared'].value),
+            '-DENABLE_THREADSUPPORT={0}'.format(
+                        spec.variants['threads'].value),
+            ]
         return args
 
-#    def setup_dependent_build_environment(self, env, dependent_spec):
-#        env.set('MPICXX', spack_cxx)
+    def setup_dependent_build_environment(self, env, dependent_spec):
+        self.spec.mpicc = spack_cc
+        self.spec.mpicxx = spack_cxx
+        env.set('MPICC',spack_cc)
+        env.set('MPICXX', spack_cxx)
+        env.set('MPICC_CC', spack_cc)
+        env.set('MPICXX_CXX', spack_cxx)
 
     def setup_run_environment(self, env):
         env.set('DASH_ROOT', self.prefix)
