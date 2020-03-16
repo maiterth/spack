@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7434b4f29..12f17d627 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -160,12 +160,6 @@ set(CMAKE_RULE_MESSAGES OFF)
+ set(CMAKE_VERBOSE_MAKEFILE OFF)
+ set(CMAKE_COLOR_MAKEFILE ON)
+ 
+-## Install path
+-if (INSTALL_PREFIX)
+-  set(CMAKE_INSTALL_PREFIX ${INSTALL_PREFIX})
+-else()
+-  set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/opt/")
+-endif()
+ 
+ if (NOT CMAKE_BUILD_TYPE)
+   set(CMAKE_BUILD_TYPE "Release")
